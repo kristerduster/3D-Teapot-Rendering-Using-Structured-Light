@@ -81,3 +81,8 @@ plt.imshow(imgR)
 plt.plot(pts2Rp[0,:],pts2Rp[1,:],'bo')
 plt.plot(pts2R[0,:],pts2R[1,:],'rx')
 plt.show()
+
+errL = np.linalg.norm(pts2Lp - pts2L, axis=0)
+errR = np.linalg.norm(pts2Rp - pts2R, axis=0)
+print("Reproj err L: mean %.2f px, max %.2f px" % (errL.mean(), errL.max()))
+print("Reproj err R: mean %.2f px, max %.2f px" % (errR.mean(), errR.max()))
