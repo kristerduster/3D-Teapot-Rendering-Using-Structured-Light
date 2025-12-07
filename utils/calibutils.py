@@ -7,9 +7,9 @@
 #   pip install --upgrade pip
 #   pip install opencv-contrib-python
 #
-# Run calibrate.py from the commandline:
+# Run calibutils.py from the commandline:
 #
-#   python calibrate.py
+#   python calibutils.py
 
 import pickle
 import numpy as np
@@ -18,8 +18,8 @@ import glob
 import matplotlib.pyplot as plt
 
 # file names, modify as necessary
-calibimgfiles = 'calib1/calib1/*.jpg'
-resultfile = 'calibration.pickle'
+calibimgfiles = 'images/calib/frame_C1*.jpg'
+resultfile = 'calibration_C1.pickle'
 
 # checkerboard coordinates in 3D
 objp = np.zeros((6*8,3), np.float32)
@@ -83,15 +83,15 @@ fid = open(resultfile, "wb" )
 pickle.dump(calib,fid)
 fid.close()
 
-#
-# optionally go through and remove radial distortion from a set of images
-#
-images = glob.glob(calibimgfiles)
-for idx, fname in enumerate(images):
-   img = cv2.imread(fname)
-   img_size = (img.shape[1], img.shape[0])
+# #
+# # optionally go through and remove radial distortion from a set of images
+# #
+# images = glob.glob(calibimgfiles)
+# for idx, fname in enumerate(images):
+#    img = cv2.imread(fname)
+#    img_size = (img.shape[1], img.shape[0])
 
-   dst = cv2.undistort(img, K, dist, None, K)
-   udfname = fname+'undistort.jpg'
-   cv2.imwrite(udfname,dst)
+#    dst = cv2.undistort(img, K, dist, None, K)
+#    udfname = fname+'undistort.jpg'
+#    cv2.imwrite(udfname,dst)
 
