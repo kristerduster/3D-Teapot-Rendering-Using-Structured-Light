@@ -4,7 +4,7 @@ import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.optimize
 import pickle
-import visutils
+from . import visutils
 
 class Camera:
     """
