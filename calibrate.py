@@ -86,3 +86,8 @@ errL = np.linalg.norm(pts2Lp - pts2L, axis=0)
 errR = np.linalg.norm(pts2Rp - pts2R, axis=0)
 print("Reproj err L: mean %.2f px, max %.2f px" % (errL.mean(), errL.max()))
 print("Reproj err R: mean %.2f px, max %.2f px" % (errR.mean(), errR.max()))
+
+# Save the calibrated cameras
+with open('both_calibrations.pickle', 'wb') as f:
+    pickle.dump((camL, camR), f)
+    print("Saved calibrated cameras to scan0_calibration.pickle")
