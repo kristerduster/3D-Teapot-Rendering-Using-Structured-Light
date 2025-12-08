@@ -2,22 +2,21 @@ import cv2
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import Camera, makerotation, calibratePose, triangulate
+from utils import Camera, makerotation, calibratePose, triangulate, load_intrinsics
 
 # load in the intrinsic camera parameters from 'calibration.pickle'
 
-with open('calibration_C0.pickle', 'rb') as f:
-    intrinsics_C0 = pickle.load(f)
-fL = (intrinsics_C0['fx'] + intrinsics_C0['fy'])/2 # rn avg out fx fy. if its especially terrible then modify camera class to take fx and fy, modify project fn to apply separate focal lens to each coord
-cL = np.array([[intrinsics_C0['cx'], intrinsics_C0['cy']]]).T
+intrinsics_C0 = load_intrinsics('calibration_C0.pickle')
+fL = intrinsics_C0['f']
+cL = intrinsics_C0['c']
+KL = intrinsics_C0['K']
 distL = intrinsics_C0['dist']
 
-with open('calibration_C1.pickle', 'rb') as f:
-    intrinsics_C1 = pickle.load(f)
-fR = (intrinsics_C1['fx'] + intrinsics_C1['fy'])/2
-cR = np.array([[intrinsics_C1['cx'], intrinsics_C1['cy']]]).T
+intrinsics_C1 = load_intrinsics('calibration_C1.pickle')
+fR = intrinsics_C1['f']
+cR = intrinsics_C1['c']
+KR = intrinsics_C1['K']
 distR = intrinsics_C1['dist']
-
 
 # create Camera objects representing the left and right cameras using intrinsics from calibration_*.pickle
 camL = Camera(f=fL,c=cL,t=np.array([[0,0,0]]).T, R=makerotation(0,0,0))
@@ -25,15 +24,9 @@ camR = Camera(f=fR,c=cR,t=np.array([[0,0,0]]).T, R=makerotation(0,0,0))
 
 # load in the left and right images and undistort
 imgL_raw = plt.imread('images/calib/frame_C0_01.jpg') # 01 seems to be clearest and straightest orientation of the checkerboard idk
-KL = np.array([[fL, 0, intrinsics_C0['cx']],
-               [0, fL, intrinsics_C0['cy']], # change to fx vs fy here if i end up modifying camera class
-               [0, 0, 1]])
 imgL = cv2.undistort(imgL_raw, KL, distL)
 
 imgR_raw = plt.imread('images/calib/frame_C1_01.jpg')
-KR = np.array([[fR, 0, intrinsics_C1['cx']],
-               [0, fR, intrinsics_C1['cy']], 
-               [0, 0, 1]])
 imgR = cv2.undistort(imgR_raw, KR, distR)
 
 

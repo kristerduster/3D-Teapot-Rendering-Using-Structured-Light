@@ -95,3 +95,13 @@ fid.close()
 #    udfname = fname+'undistort.jpg'
 #    cv2.imwrite(udfname,dst)
 
+def load_intrinsics(pickle_path):
+    with open(pickle_path, 'rb') as f:
+        intr = pickle.load(f)
+    fx, fy = intr['fx'], intr['fy']
+    f = (fx + fy) / 2.0
+    c = np.array([[intr['cx']], [intr['cy']]], dtype=float)
+    K = np.array([[f, 0, intr['cx']],
+                  [0, f, intr['cy']],
+                  [0,  0,       1.0]], dtype=float)
+    return {'f': f, 'c': c, 'dist': intr['dist'], 'K': K}
