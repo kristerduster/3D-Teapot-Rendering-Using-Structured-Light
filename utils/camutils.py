@@ -253,7 +253,7 @@ def calibratePose(pts3,pts2,cam,params_init):
 
     return cam
 
-def decode(imprefix,start,threshold):
+def decode(imprefix,start,threshold, K, dist) :
     """
     Given a sequence of 20 images of a scene showing projected 10 bit gray code, 
     decode the binary sequence into a decimal value in (0,1023) for each pixel.
@@ -291,7 +291,9 @@ def decode(imprefix,start,threshold):
         filename2 = f"{imprefix}{(start + 2*i + 1):02}.png" 
 
         img1 = cv2.imread(filename1, cv2.IMREAD_GRAYSCALE)
+        img1 = cv2.undistort(img1, K, dist)
         img2 = cv2.imread(filename2, cv2.IMREAD_GRAYSCALE)
+        img2 = cv2.undistort(img2, K, dist)
         
         if img1 is None or img2 is None:
             raise FileNotFoundError(f"Could not load {filename1} or {filename2}")
@@ -330,7 +332,7 @@ def decode(imprefix,start,threshold):
         
     return code,mask
 
-def reconstruct(imprefixL,imprefixR,threshold,camL,camR):
+def reconstruct(imprefixL,imprefixR,threshold,camL,camR, K0, K1, dist0, dist1):
     """
     Performing matching and triangulation of points on the surface using structured
     illumination. This function decodes the binary graycode patterns, matches 
@@ -363,11 +365,11 @@ def reconstruct(imprefixL,imprefixR,threshold,camL,camR):
     """
 
     # Decode the H and V coordinates for the two views
-    H_left, Hmask_left = decode(imprefixL, 0, threshold)
-    V_left, Vmask_left = decode(imprefixL, 20, threshold)
+    H_left, Hmask_left = decode(imprefixL, 0, threshold, K0, dist0)
+    V_left, Vmask_left = decode(imprefixL, 20, threshold, K0, dist0)
 
-    H_right, Hmask_right = decode(imprefixR, 0, threshold)
-    V_right, Vmask_right = decode(imprefixR, 20, threshold)
+    H_right, Hmask_right = decode(imprefixR, 0, threshold, K1, dist1)
+    V_right, Vmask_right = decode(imprefixR, 20, threshold, K1, dist1)
 
     # Construct the combined 20 bit code C = H + 1024*V and mask for each view
     code_left = (H_left << 10) + V_left # bit shift H_left by 10

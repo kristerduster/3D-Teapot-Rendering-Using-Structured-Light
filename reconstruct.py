@@ -10,14 +10,10 @@ fid = open('both_calibrations.pickle','rb')
 fid.close()
 
 intrinsics_C0 = load_intrinsics('calibration_C0.pickle')
-f0 = intrinsics_C0['f']
-c0 = intrinsics_C0['c']
 K0 = intrinsics_C0['K']
 dist0 = intrinsics_C0['dist']
 
 intrinsics_C1 = load_intrinsics('calibration_C1.pickle')
-f1 = intrinsics_C1['f']
-c1 = intrinsics_C1['c']
 K1 = intrinsics_C1['K']
 dist1 = intrinsics_C1['dist']
 
@@ -43,7 +39,7 @@ for grab_id in range(7):
     imprefixC0 = f'images/teapot/grab_{grab_id}_u/frame_C0_'
     imprefixC1 = f'images/teapot/grab_{grab_id}_u/frame_C1_'
     
-    pts2L, pts2R, pts3 = reconstruct(imprefixC0, imprefixC1, threshold, camC0, camC1)
+    pts2L, pts2R, pts3 = reconstruct(imprefixC0, imprefixC1, threshold, camC0, camC1, K0, K1, dist0, dist1)
     
     # Apply bounds to filter noisy points
     xmin, xmax, ymin, ymax, zmin, zmax = bounds[grab_id]
@@ -95,21 +91,17 @@ for grab_id in range(7):
     for i in range(pts3_clean.shape[1]):
         c = None
 
-        # Try cam0
+        # Sample RGB from C0 if projected pt is in front of the camera, within the height and width bounds of the img, and if this pixel is part of the fg mask (teapot)
         if z0[i] > 0 and 0 <= u0[i] < W0 and 0 <= v0[i] < H0 and mask0[int(v0[i]), int(u0[i])]:
             c = fg0[int(v0[i]), int(u0[i]), :]
 
-        # Else try cam1
+        # Else try C0
         if c is None and z1[i] > 0 and 0 <= u1[i] < W1 and 0 <= v1[i] < H1 and mask1[int(v1[i]), int(u1[i])]:
             c = fg1[int(v1[i]), int(u1[i]), :]
 
         if c is not None:
             pts_kept.append(pts3_clean[:, i])
             colors.append(c / 255.0)
-
-    if len(pts_kept) == 0:
-        print("No colored points found; skipping.")
-        continue
 
     pts_kept = np.stack(pts_kept, axis=1)
     colors = np.stack(colors, axis=0)
@@ -118,7 +110,6 @@ for grab_id in range(7):
     pcd_col = o3d.geometry.PointCloud()
     pcd_col.points = o3d.utility.Vector3dVector(pts_kept.T)
     pcd_col.colors = o3d.utility.Vector3dVector(colors)
-
 
     # plot_2d_projections(pts_kept, colors, bounds[grab_id])
     plot_3d_cloud(pts_kept, colors, camC0, camC1, lookC0, lookC1, bounds[grab_id], 
