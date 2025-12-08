@@ -2,11 +2,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import open3d as o3d
-from utils import decode, reconstruct
+import cv2
+from utils import decode, reconstruct, load_intrinsics, project_3D, plot_2d_projections, plot_3d_cloud
 
 fid = open('both_calibrations.pickle','rb')
 (camC0, camC1) = pickle.load(fid)
 fid.close()
+
+intrinsics_C0 = load_intrinsics('calibration_C0.pickle')
+f0 = intrinsics_C0['f']
+c0 = intrinsics_C0['c']
+K0 = intrinsics_C0['K']
+dist0 = intrinsics_C0['dist']
+
+intrinsics_C1 = load_intrinsics('calibration_C1.pickle')
+f1 = intrinsics_C1['f']
+c1 = intrinsics_C1['c']
+K1 = intrinsics_C1['K']
+dist1 = intrinsics_C1['dist']
 
 threshold = 0.02
 
@@ -48,24 +61,73 @@ for grab_id in range(7):
     pcd_clean, inliers = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.5)
     
     print(f"After denoising: {len(pcd_clean.points)} points")
-    xc, yc, zc = np.asarray(pcd_clean.points).T
+    pts3_clean = np.asarray(pcd_clean.points).T
 
-    fig = plt.figure(figsize=(16,8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(xc, yc, zc, s=1, c='teal', label='Denoised Reconstructed points')
-    ax.plot(camC0.t[0], camC0.t[1], camC0.t[2], 'go', markersize=10, label='Left cam')
-    ax.plot(camC1.t[0], camC1.t[1], camC1.t[2], 'mo', markersize=10, label='Right cam')
-    ax.plot(lookC0[0,:], lookC0[1,:], lookC0[2,:], 'g-', linewidth=2)
-    ax.plot(lookC1[0,:], lookC1[1,:], lookC1[2,:], 'm-', linewidth=2)
-    ax.set_xlim([xmin,xmax]); ax.set_ylim([ymin,ymax]); ax.set_zlim([zmin,zmax])
-    ax.set_xlabel("X"); ax.set_ylabel("Y"); ax.set_zlabel("Z")
-    ax.set_title(f"Denoised 3D Point Cloud with Cameras - Grab {grab_id}")
-    plt.legend(loc='best')
+    # Undistort color imgs
+    fg0 = cv2.imread(f'images/teapot/grab_{grab_id}_u/color_C0_01.png')
+    fg0 = cv2.undistort(fg0, K0, dist0)
+
+    bg0 = cv2.imread(f'images/teapot/grab_{grab_id}_u/color_C0_00.png')
+    bg0 = cv2.undistort(bg0, K0, dist0)
+
+    fg1 = cv2.imread(f'images/teapot/grab_{grab_id}_u/color_C1_01.png')
+    fg1 = cv2.undistort(fg1, K1, dist1)
+    
+    bg1 = cv2.imread(f'images/teapot/grab_{grab_id}_u/color_C1_00.png')
+    bg1 = cv2.undistort(bg1, K1, dist1)
+
+    # Subtract background to get foreground masks
+    diff0 = cv2.cvtColor(cv2.absdiff(fg0, bg0), cv2.COLOR_BGR2GRAY)
+    diff1 = cv2.cvtColor(cv2.absdiff(fg1, bg1), cv2.COLOR_BGR2GRAY)
+    mask0 = diff0 > 15  # threshold
+    mask1 = diff1 > 15
+
+    H0, W0 = mask0.shape
+    H1, W1 = mask1.shape
+
+    # project 3d points to each camera
+    u0, v0, z0 = project_3D(pts3_clean, K0, camC0.R, camC0.t)
+    u1, v1, z1 = project_3D(pts3_clean, K1, camC1.R, camC1.t)
+
+    colors = []
+    pts_kept = []
+
+    for i in range(pts3_clean.shape[1]):
+        c = None
+
+        # Try cam0
+        if z0[i] > 0 and 0 <= u0[i] < W0 and 0 <= v0[i] < H0 and mask0[int(v0[i]), int(u0[i])]:
+            c = fg0[int(v0[i]), int(u0[i]), :]
+
+        # Else try cam1
+        if c is None and z1[i] > 0 and 0 <= u1[i] < W1 and 0 <= v1[i] < H1 and mask1[int(v1[i]), int(u1[i])]:
+            c = fg1[int(v1[i]), int(u1[i]), :]
+
+        if c is not None:
+            pts_kept.append(pts3_clean[:, i])
+            colors.append(c / 255.0)
+
+    if len(pts_kept) == 0:
+        print("No colored points found; skipping.")
+        continue
+
+    pts_kept = np.stack(pts_kept, axis=1)
+    colors = np.stack(colors, axis=0)
+
+    # Build colored point cloud
+    pcd_col = o3d.geometry.PointCloud()
+    pcd_col.points = o3d.utility.Vector3dVector(pts_kept.T)
+    pcd_col.colors = o3d.utility.Vector3dVector(colors)
+
+
+    # plot_2d_projections(pts_kept, colors, bounds[grab_id])
+    plot_3d_cloud(pts_kept, colors, camC0, camC1, lookC0, lookC1, bounds[grab_id], 
+                  title=f"Colored Point Cloud - Grab {grab_id}")
     plt.show()
 
     # Save to PLY
     output_filename = f'teapot_grab_{grab_id}.ply'
-    o3d.io.write_point_cloud(output_filename, pcd_clean)
+    o3d.io.write_point_cloud(output_filename, pcd_col)
     print(f"Saved to {output_filename}")
 
 # THRESHOLD EXPERIMENTATION
