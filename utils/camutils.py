@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.optimize
-import pickle
+import cv2
 from . import visutils
 
 class Camera:
@@ -253,4 +253,150 @@ def calibratePose(pts3,pts2,cam,params_init):
     cam.update_extrinsics(opt_params)
 
     return cam
+
+def decode(imprefix,start,threshold):
+    """
+    Given a sequence of 20 images of a scene showing projected 10 bit gray code, 
+    decode the binary sequence into a decimal value in (0,1023) for each pixel.
+    Mark those pixels whose code is likely to be incorrect based on the user 
+    provided threshold.  Images are assumed to be named "imageprefixN.png" where
+    N is a 2 digit index (e.g., "img00.png,img01.png,img02.png...")
  
+    Parameters
+    ----------
+    imprefix : str
+       Image name prefix
+      
+    start : int
+       Starting index
+       
+    threshold : float
+       Threshold to determine if a bit is decodeable
+       
+    Returns
+    -------
+    code : 2D numpy.array (dtype=int)
+        Array the same size as input images with entries in (0..1023)
+        
+    mask : 2D numpy.array (dtype=logical)
+        Array indicating which pixels were correctly decoded based on the threshold
+    
+    """
+    
+    nbits = 10
+    binary_images = []
+    mask_planes = []
+
+    for i in range(nbits):
+        filename1 = f"{imprefix}{(start + 2*i):02}.png" # pad with leading zeros/always be 2 digits
+        filename2 = f"{imprefix}{(start + 2*i + 1):02}.png" 
+
+        img1 = cv2.imread(filename1, cv2.IMREAD_GRAYSCALE)
+        img2 = cv2.imread(filename2, cv2.IMREAD_GRAYSCALE)
+        
+        if img1 is None or img2 is None:
+            raise FileNotFoundError(f"Could not load {filename1} or {filename2}")
+        
+        img1 = img1.astype(float) / 255.0
+        img2 = img2.astype(float) / 255.0
+
+        # img1 = cv2.imread(filename1, cv2.IMREAD_GRAYSCALE).astype(float) / 255.0
+        # img2 = cv2.imread(filename2, cv2.IMREAD_GRAYSCALE).astype(float) / 255.0
+
+        bit_plane = (img1 > img2).astype(int) # if img1[x,y] > img2[x,y] bit = 1 else 0
+
+        difference = np.abs(img1 - img2)
+        mask_plane = (difference >= threshold) # True = above thresh else False
+
+        binary_images.append(bit_plane)
+        mask_planes.append(mask_plane)
+
+    bit_stack = np.stack(binary_images, axis=-1) # stack 10 binary imgs into single greycode img
+    binary_bits = np.zeros_like(bit_stack) # create array of all 0s same size as bit_stack
+    binary_bits[:, :, 0] = bit_stack[:, :, 0] # msb the same
+
+    # convert grey code to binary coded decimal by using xor of successive frames
+    for i in range(1, bit_stack.shape[-1]):
+        binary_bits[:, :,i] = binary_bits[:, :, i-1] ^ bit_stack[:, :,i] # XOR element wise each binary code bit next to gray code bit in next position
+
+    H, W, _ = binary_bits.shape
+    code = np.zeros((H,W), dtype = int)
+    
+    # convert bcd frames to decimal num for each pixel
+    for i in range(nbits):
+        code += binary_bits[:, :,i] * (2 ** (nbits - 1 - i))
+
+    # pixel is True iff all 10 planes are True else False
+    mask = np.logical_and.reduce(mask_planes)
+        
+    return code,mask
+
+def reconstruct(imprefixL,imprefixR,threshold,camL,camR):
+    """
+    Performing matching and triangulation of points on the surface using structured
+    illumination. This function decodes the binary graycode patterns, matches 
+    pixels with corresponding codes, and triangulates the result.
+    
+    The returned arrays include 2D and 3D coordinates of only those pixels which
+    were triangulated where pts3[:,i] is the 3D coordinte produced by triangulating
+    pts2L[:,i] and pts2R[:,i]
+
+    Parameters
+    ----------
+    imprefixL, imprefixR : str
+        Image prefixes for the coded images from the left and right camera
+        
+    threshold : float
+        Threshold to determine if a bit is decodeable
+   
+    camL,camR : Camera
+        Calibration info for the left and right cameras
+        
+    Returns
+    -------
+    pts2L,pts2R : 2D numpy.array (dtype=float)
+        The 2D pixel coordinates of the matched pixels in the left and right
+        image stored in arrays of shape 2xN
+        
+    pts3 : 2D numpy.array (dtype=float)
+        Triangulated 3D coordinates stored in an array of shape 3xN
+        
+    """
+
+    # Decode the H and V coordinates for the two views
+    H_left, Hmask_left = decode(imprefixL, 0, threshold)
+    V_left, Vmask_left = decode(imprefixL, 20, threshold)
+
+    H_right, Hmask_right = decode(imprefixR, 0, threshold)
+    V_right, Vmask_right = decode(imprefixR, 20, threshold)
+
+    # Construct the combined 20 bit code C = H + 1024*V and mask for each view
+    code_left = (H_left << 10) + V_left # bit shift H_left by 10
+    code_right = (H_right << 10) + V_right
+
+    mask_left = Hmask_left & Vmask_left
+    mask_right = Hmask_right & Vmask_right
+    
+    # Find the indices of pixels in the left and right code image that 
+    # have matching codes. If there are multiple matches, just
+    # choose one arbitrarily.
+    ...
+    CL = code_left[mask_left].flatten() # select only pixels where mask is true then flatten into 1d (contains valid pixels' 20 bit code)
+    CR = code_right[mask_right].flatten()
+
+    coordsL = np.argwhere(mask_left) # get coordinates of valid pixels 
+    coordsR = np.argwhere(mask_right)
+    
+    common_codes, idxL, idxR = np.intersect1d(CL, CR, return_indices = True) # get indices of pixels with matching common codes
+    matchL = coordsL[idxL] # get coordinates of matching pixels
+    matchR = coordsR[idxR]
+
+    # Build 2D pixel coordinate arrays from matches
+    pts2L = matchL[:, ::-1].T.astype(float)  
+    pts2R = matchR[:, ::-1].T.astype(float)
+    
+
+    # Now triangulate the points
+    pts3 = triangulate(pts2L, camL, pts2R, camR)
+    
+    return pts2L,pts2R,pts3
