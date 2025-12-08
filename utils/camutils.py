@@ -4,7 +4,6 @@ import matplotlib.patches as patches
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.optimize
 import cv2
-from . import visutils
 
 class Camera:
     """
@@ -400,3 +399,11 @@ def reconstruct(imprefixL,imprefixR,threshold,camL,camR):
     pts3 = triangulate(pts2L, camL, pts2R, camR)
     
     return pts2L,pts2R,pts3
+
+def project_3D(pts3, K, R, t):
+    Pc = R.T @ (pts3 - t)  # 3xN
+    z = Pc[2, :]
+    uv = K @ (Pc / z)
+    u, v = uv[0, :], uv[1, :]
+    return u, v, z
+
