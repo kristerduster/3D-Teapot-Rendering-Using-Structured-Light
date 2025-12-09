@@ -65,22 +65,10 @@ merged = o3d.geometry.PointCloud()
 for cloud in aligned_clouds:
     merged += cloud
 
-print(f"Merged cloud: {len(merged.points)} points (before downsampling)")
-
-# Optional: downsample to reduce redundancy in overlapping regions
-merged_downsampled = merged.voxel_down_sample(voxel_size=0.1)  # 1mm voxels
-print(f"After downsampling: {len(merged_downsampled.points)} points")
-
-# Center at origin
-center = merged_downsampled.get_center()
-merged_downsampled.translate(-center)
-
 # Save merged cloud
-o3d.io.write_point_cloud('teapot_merged.ply', merged_downsampled)
+o3d.io.write_point_cloud('teapot_merged.ply', merged)
 print("\nSaved: teapot_merged.ply")
 
 # Visualize result
 print("Visualizing merged cloud...")
-o3d.visualization.draw_geometries([merged_downsampled], 
-                                   window_name="Merged Teapot",
-                                   width=1024, height=768)
+o3d.visualization.draw_geometries([merged], window_name="Merged Teapot", width=1024, height=768)
