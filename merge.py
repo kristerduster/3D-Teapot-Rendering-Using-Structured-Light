@@ -8,10 +8,10 @@ for grab_id in range(7):
     center = pcd.get_center()
     print(f"Grab {grab_id}: center = {center}")
     
-    # Translate to origin
+    # translate to origin
     pcd.translate(-center)
     
-    # Save centered
+    # save
     o3d.io.write_point_cloud(f'teapot_grab_{grab_id}.ply', pcd)
     print(f"  Saved centered to teapot_grab_{grab_id}.ply")
 
@@ -27,13 +27,11 @@ blender_transforms = {
 }
 
 def blender_to_matrix(loc, rot_deg):
-    """Convert Blender location & rotation to 4x4 transformation matrix"""
-    # Rotation in degrees → radians
+    """convert Blender location & rotation to 4x4 transformation matrix"""
     rot_rad = np.radians(rot_deg)
-    # Create rotation matrix (Blender uses XYZ Euler angles)
+    # rotation matrix (Blender uses XYZ Euler angles)
     r = Rotation.from_euler('xyz', rot_rad)
     
-    # Build 4x4 matrix
     mat = np.eye(4)
     mat[:3, :3] = r.as_matrix()
     mat[:3, 3] = loc
@@ -50,25 +48,23 @@ for grab_id in range(0, 7):
     source = o3d.io.read_point_cloud(f'teapot_grab_{grab_id}.ply')
     print(f"  Loaded: {len(source.points)} points")
 
-    # Get Blender transform
+    # get Blender transform
     loc = blender_transforms[grab_id]["loc"]
     rot = blender_transforms[grab_id]["rot"]
     trans_matrix = blender_to_matrix(loc, rot)
 
-    # Apply transformation
+    # apply transformation
     source.transform(trans_matrix)
     aligned_clouds.append(source)
 
-# Merge all aligned clouds
+# merge all aligned clouds
 print("\nMerging aligned clouds...")
 merged = o3d.geometry.PointCloud()
 for cloud in aligned_clouds:
     merged += cloud
 
-# Save merged cloud
 o3d.io.write_point_cloud('teapot_merged.ply', merged)
 print("\nSaved: teapot_merged.ply")
 
-# Visualize result
 print("Visualizing merged cloud...")
 o3d.visualization.draw_geometries([merged], window_name="Merged Teapot", width=1024, height=768)

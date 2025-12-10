@@ -41,7 +41,7 @@ for grab_id in range(7):
     
     pts2L, pts2R, pts3 = reconstruct(imprefixC0, imprefixC1, threshold, camC0, camC1, K0, K1, dist0, dist1)
     
-    # Apply bounds to filter noisy points
+    # apply bounds to filter noisy points
     xmin, xmax, ymin, ymax, zmin, zmax = bounds[grab_id]
     mask = (pts3[0,:] >= xmin) & (pts3[0,:] <= xmax) & \
             (pts3[1,:] >= ymin) & (pts3[1,:] <= ymax) & \
@@ -51,7 +51,7 @@ for grab_id in range(7):
     print(f"Before filtering: {pts3.shape[1]} points")
     print(f"After filtering: {pts3_filtered.shape[1]} points")
     
-    # Convert to Open3D and denoise
+    # convert to Open3D and denoise
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pts3_filtered.T)
     pcd_clean, inliers = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.5)
@@ -59,7 +59,7 @@ for grab_id in range(7):
     print(f"After denoising: {len(pcd_clean.points)} points")
     pts3_clean = np.asarray(pcd_clean.points).T
 
-    # Undistort color imgs
+    # undistort color imgs
     fg0 = cv2.imread(f'images/teapot/grab_{grab_id}_u/color_C0_01.png')
     fg0 = cv2.undistort(fg0, K0, dist0)
 
@@ -72,7 +72,7 @@ for grab_id in range(7):
     bg1 = cv2.imread(f'images/teapot/grab_{grab_id}_u/color_C1_00.png')
     bg1 = cv2.undistort(bg1, K1, dist1)
 
-    # Subtract background to get foreground masks
+    # subtract background to get foreground masks
     diff0 = cv2.cvtColor(cv2.absdiff(fg0, bg0), cv2.COLOR_BGR2GRAY)
     diff1 = cv2.cvtColor(cv2.absdiff(fg1, bg1), cv2.COLOR_BGR2GRAY)
     mask0 = diff0 > 15  # threshold
@@ -91,11 +91,11 @@ for grab_id in range(7):
     for i in range(pts3_clean.shape[1]):
         c = None
 
-        # Sample RGB from C0 if projected pt is in front of the camera, within the height and width bounds of the img, and if this pixel is part of the fg mask (teapot)
+        # sample RGB from C0 if projected pt is in front of the camera, within the height and width bounds of the img, and if this pixel is part of the fg mask (teapot)
         if z0[i] > 0 and 0 <= u0[i] < W0 and 0 <= v0[i] < H0 and mask0[int(v0[i]), int(u0[i])]:
             c = fg0[int(v0[i]), int(u0[i]), :]
 
-        # Else try C0
+        # else try C0
         if c is None and z1[i] > 0 and 0 <= u1[i] < W1 and 0 <= v1[i] < H1 and mask1[int(v1[i]), int(u1[i])]:
             c = fg1[int(v1[i]), int(u1[i]), :]
 
@@ -106,7 +106,7 @@ for grab_id in range(7):
     pts_kept = np.stack(pts_kept, axis=1)
     colors = np.stack(colors, axis=0)
 
-    # Build colored point cloud
+    # colored point cloud
     pcd_col = o3d.geometry.PointCloud()
     pcd_col.points = o3d.utility.Vector3dVector(pts_kept.T)
     pcd_col.colors = o3d.utility.Vector3dVector(colors)
@@ -116,7 +116,7 @@ for grab_id in range(7):
                   title=f"Colored Point Cloud - Grab {grab_id}")
     plt.show()
 
-    # Save to PLY
+    # save to PLY to export to blender
     output_filename = f'teapot_grab_{grab_id}.ply'
     o3d.io.write_point_cloud(output_filename, pcd_col)
     print(f"Saved to {output_filename}")

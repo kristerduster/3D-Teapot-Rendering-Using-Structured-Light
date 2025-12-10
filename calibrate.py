@@ -29,7 +29,6 @@ imgL = cv2.undistort(imgL_raw, KL, distL)
 imgR_raw = plt.imread('images/calib/frame_C1_01.jpg')
 imgR = cv2.undistort(imgR_raw, KR, distR)
 
-
 # find coordinates of chessboard corners
 ret, cornersL = cv2.findChessboardCorners(imgL, (8,6), None)
 pts2L = cornersL.squeeze().T

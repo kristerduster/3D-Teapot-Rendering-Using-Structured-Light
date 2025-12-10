@@ -3,11 +3,11 @@ import open3d as o3d
 
 pcd = o3d.io.read_point_cloud("teapot_merged.ply")
 
-# Estimate and orient normals
+# estimate and orient normals
 pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.2, max_nn=50)) # find up to 50 nearest neighbors within 0.2 units and fit a plane to get normals for poisson
 pcd.orient_normals_consistent_tangent_plane(30) # make all normals point the same direction so no flipped mesh faces
 
-# Poisson reconstruction
+# poisson reconstruction/triangle meshing
 mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
     pcd, depth=15, width=0, scale=1.1, linear_fit=False
 ) # scale a little higher than 1 to get bounds
