@@ -4,7 +4,7 @@ from scipy.spatial.transform import Rotation
 
 # center point clouds about the origin
 for grab_id in range(7):
-    pcd = o3d.io.read_point_cloud(f'teapot_grab_{grab_id}.ply')
+    pcd = o3d.io.read_point_cloud(f'point_clouds/teapot_grab_{grab_id}.ply')
     center = pcd.get_center()
     print(f"Grab {grab_id}: center = {center}")
     
@@ -12,8 +12,8 @@ for grab_id in range(7):
     pcd.translate(-center)
     
     # save
-    o3d.io.write_point_cloud(f'teapot_grab_{grab_id}.ply', pcd)
-    print(f"  Saved centered to teapot_grab_{grab_id}.ply")
+    o3d.io.write_point_cloud(f'point_clouds/teapot_grab_{grab_id}.ply', pcd)
+    print(f"  Saved centered to point_clouds/teapot_grab_{grab_id}.ply")
 
 
 blender_transforms = {
@@ -45,7 +45,7 @@ aligned_clouds = []
 # perform manual alignment
 for grab_id in range(0, 7):
     print(f"\nAligning grab {grab_id} to reference...")
-    source = o3d.io.read_point_cloud(f'teapot_grab_{grab_id}.ply')
+    source = o3d.io.read_point_cloud(f'point_clouds/teapot_grab_{grab_id}.ply')
     print(f"  Loaded: {len(source.points)} points")
 
     # get Blender transform
@@ -63,8 +63,8 @@ merged = o3d.geometry.PointCloud()
 for cloud in aligned_clouds:
     merged += cloud
 
-o3d.io.write_point_cloud('teapot_merged.ply', merged)
-print("\nSaved: teapot_merged.ply")
+o3d.io.write_point_cloud('point_clouds/teapot_merged.ply', merged)
+print("\nSaved: point_clouds/teapot_merged.ply")
 
 print("Visualizing merged cloud...")
 o3d.visualization.draw_geometries([merged], window_name="Merged Teapot", width=1024, height=768)

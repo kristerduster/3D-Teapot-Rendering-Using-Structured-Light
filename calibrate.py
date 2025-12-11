@@ -6,13 +6,13 @@ from utils import Camera, makerotation, calibratePose, triangulate, load_intrins
 
 # load in the intrinsic camera parameters from 'calibration.pickle'
 
-intrinsics_C0 = load_intrinsics('calibration_C0.pickle')
+intrinsics_C0 = load_intrinsics('calibration_pickles/calibration_C0.pickle')
 fL = intrinsics_C0['f']
 cL = intrinsics_C0['c']
 KL = intrinsics_C0['K']
 distL = intrinsics_C0['dist']
 
-intrinsics_C1 = load_intrinsics('calibration_C1.pickle')
+intrinsics_C1 = load_intrinsics('calibration_pickles/calibration_C1.pickle')
 fR = intrinsics_C1['f']
 cR = intrinsics_C1['c']
 KR = intrinsics_C1['K']
@@ -80,6 +80,6 @@ print("Reproj err L: mean %.2f px, max %.2f px" % (errL.mean(), errL.max()))
 print("Reproj err R: mean %.2f px, max %.2f px" % (errR.mean(), errR.max()))
 
 # Save the calibrated cameras
-with open('both_calibrations.pickle', 'wb') as f:
+with open('calibration_pickles/both_calibrations.pickle', 'wb') as f:
     pickle.dump((camL, camR), f)
-    print("Saved calibrated cameras to scan0_calibration.pickle")
+    print("Saved calibrated cameras to calibration_pickles/both_calibrations.pickle")

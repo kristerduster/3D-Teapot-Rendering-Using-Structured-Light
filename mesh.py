@@ -1,7 +1,7 @@
 import numpy as np
 import open3d as o3d
 
-pcd = o3d.io.read_point_cloud("teapot_merged.ply")
+pcd = o3d.io.read_point_cloud("point_clouds/teapot_merged.ply")
 
 # estimate and orient normals
 pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.2, max_nn=50)) # find up to 50 nearest neighbors within 0.2 units and fit a plane to get normals for poisson
@@ -25,6 +25,6 @@ mesh.remove_non_manifold_edges()
 # recompute vertex normals for correct shading and visualization
 mesh.compute_vertex_normals()
 
-o3d.io.write_triangle_mesh("teapot_merged_poisson.obj", mesh)
-print("Saved teapot_merged_poisson.obj")
+o3d.io.write_triangle_mesh("blender/teapot_merged_poisson.obj", mesh)
+print("Saved blender/teapot_merged_poisson.obj")
 o3d.visualization.draw_geometries([mesh], window_name="Teapot Poisson", mesh_show_back_face=True)

@@ -5,15 +5,15 @@ import open3d as o3d
 import cv2
 from utils import decode, reconstruct, load_intrinsics, project_3D, plot_2d_projections, plot_3d_cloud
 
-fid = open('both_calibrations.pickle','rb')
+fid = open('calibration_pickles/both_calibrations.pickle','rb')
 (camC0, camC1) = pickle.load(fid)
 fid.close()
 
-intrinsics_C0 = load_intrinsics('calibration_C0.pickle')
+intrinsics_C0 = load_intrinsics('calibration_pickles/calibration_C0.pickle')
 K0 = intrinsics_C0['K']
 dist0 = intrinsics_C0['dist']
 
-intrinsics_C1 = load_intrinsics('calibration_C1.pickle')
+intrinsics_C1 = load_intrinsics('calibration_pickles/calibration_C1.pickle')
 K1 = intrinsics_C1['K']
 dist1 = intrinsics_C1['dist']
 
@@ -117,7 +117,7 @@ for grab_id in range(7):
     plt.show()
 
     # save to PLY to export to blender
-    output_filename = f'teapot_grab_{grab_id}.ply'
+    output_filename = f'point_clouds/teapot_grab_{grab_id}.ply'
     o3d.io.write_point_cloud(output_filename, pcd_col)
     print(f"Saved to {output_filename}")
 

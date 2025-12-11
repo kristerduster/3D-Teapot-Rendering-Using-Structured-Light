@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 # file names, modify as necessary
 calibimgfiles = 'images/calib/frame_C1*.jpg'
-resultfile = 'calibration_C1.pickle'
+resultfile = 'calibration_pickles/calibration_C1.pickle'
 
 # checkerboard coordinates in 3D
 objp = np.zeros((6*8,3), np.float32)
